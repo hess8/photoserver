@@ -18,17 +18,17 @@ if not os.path.exists(logsPath):
     os.mkdir(logsPath)
 timestamp = datetime.now().replace(microsecond=0).isoformat()
 latestLog = '{}/rsync.log'.format(logsPath)
-logFile = '{}/rsync{}'.format(logsPath,timestamp)
-summaryFile = '{}/summary{}'.format(logsPath,timestamp)
+logFile = '{}/rsync{}.log'.format(logsPath,timestamp)
+summaryFile = '{}/summary{}.log'.format(logsPath,timestamp)
 # print(os.path.getctime(latestLog))
 lines = readfile(latestLog)
 summary = []
 summaryStr=''
 newData = False
-keepTags = [' f>', ' sent ', 'total size']
+keepTags = [' >f', ' sent ', 'total size']
 for line in lines:
-    if ' f>' in line:
-        email = True
+    if ' >f' in line:
+        newData = True
         break
 #Make summary and email
 if newData:
@@ -36,11 +36,25 @@ if newData:
         for tag in keepTags:
             if tag in line:
                 summary.append(line)
-                summaryStr += line
-                print (line)
+                summaryStr += line + '<br>\n'
+                # print (line)
                 break
-    subject = 'Photoserver rsync summary {}'.timestamp
-    body = summaryStr
+    subject = 'Photoserver rsync summary {}'.format(timestamp)
+    html = '<!DOCTYPE html>\n'
+    html += '<html>\n'
+    html += '<head>\n'
+    html += '<style> body {font-family:courier, courier new, serif;} </style>\n'
+    html += '<body>\n'
+    html += '<p>\n'
+    html += summaryStr
+    html += '</p>\n'
+    html += '</body>\n'
+    html += '</head>\n'
+    html += '</html>\n'
+
+    # body = '<font="Font Name Here">Your e-mail here</font>summaryStr
+    body = html
+    print (body)
     writeFile(summaryFile, summary)
 else:
     print ('No files transferred')
@@ -56,11 +70,12 @@ with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
     message["Subject"] = subject
     message["From"] = email_from
     message["To"] = email_to
-    message.attach(MIMEText(body, "plain"))
+    # message.attach(MIMEText(body, "plain"))
     message.attach(MIMEText(body, "html"))
     server.sendmail(
         email_from, email_to, message.as_string())
 # except:
 #     print("Can't connect to email server or send email.  Reading login info from ../secure/photoserverEmail.py")
 writeFile(logFile,lines)
+# print (summaryStr)
 print ('Done')

@@ -20,50 +20,56 @@ lastBackupSize = None
 backupIncr = None
 if len(lines) > 0:
     lastBackupSize = int(readfile('lastBackupSize.txt')[0])
-totalBackupSize = int(diskUsage(backupDir)) # Mb
+totalBackupSize = int(diskUsage(backupDir)) # MB
 timestamp = datetime.now().replace(microsecond=0).isoformat()
 latestLog = 'logs/rsync.log'
 logFile = 'logs/rsync{}.log'.format(timestamp)
 summaryFile = 'logs/summary{}.log'.format(timestamp)
-# print(os.path.getctime(latestLog))
 lines = readfile(latestLog)
 if len(lines) == 0: sys.exit('Stop.  logs/rsync.logs is empty or does not exist')
-summary = []
-summaryStr=''
+summary = ['']
+header = []
 newData = False
 keepTags = [' >f', ' sent ', 'total size']
+excludeTags = ['/.git/objects']
 for line in lines:
-    if ' >f' in line and '/.git/objects/pack/pack' not in line:
+    if ' >f' in line and '/.git/objects' not in line:
         newData = True
         break
 for line in lines:
     for tag in keepTags:
         if tag in line:
-            summary.append(line)
-            summaryStr += line + '<br>\n'
+            for excl in excludeTags:
+                if excl in line:
+                    break
+            else:
+                summary.append(line)
             break
 writeFile(logFile,lines)
-print (summaryStr)
 
 for line in summary:
     if 'total size' in line:
         rsyncTot = int(int(line.replace(',','').split('is')[1].split('speedup')[0])/1e6)
-          #Mb
     elif ' sent ' in line:
-        rsyncRec = int(int(line.replace(',','').split('received')[1].split('bytes')[0])/1e6) #Mb
+        rsyncRec = int(int(line.replace(',','').split('received')[1].split('bytes')[0])/1e6)
+header.append('rsync received\t\t' + str(rsyncRec).rjust(10) + ' MB'.format())
+header.append('rsync total size\t' + str(rsyncTot).rjust(10) + ' MB'.format())
 if lastBackupSize:
     backupIncr = totalBackupSize - lastBackupSize #read from disk
-    print('Stored increment', backupIncr)
+    header.append('Stored increment\t' + str(backupIncr).rjust(10) + ' MB'.format())
 else:
     print('lastBackupSize could not be read')
-print('rsyncTot', rsyncTot)
-print ('totalBackupSize',totalBackupSize)
-print ('rsyncRec', rsyncRec)
-
+    header.append('lastBackupSize could not be read')
+# header.append('')
+summaryStr = '\n'
+headerStr = ''
+for line in summary:
+    summaryStr += line + '\n'
+for line in header:
+    headerStr += line + '\n'
 
 writeFile('lastBackupSize.txt',[str(totalBackupSize)])
-alerts = []
-
+headerStr + summaryStr
 html = '<!DOCTYPE html>\n'
 html += '<html>\n'
 html += '<head>\n'
@@ -75,18 +81,20 @@ html += '</p>\n'
 html += '</body>\n'
 html += '</head>\n'
 html += '</html>\n'
-html
+
+print (headerStr, summaryStr)
+
 
 #Make summary and email
 if backupIncr is not None and backupIncr < 0:
     print ('Backup size has decreased!')
     subject = 'Photoserver backup size has decreased!'
     body = html
-    writeFile(summaryFile, summary)
+    writeFile(summaryFile, header + summary)
 elif newData:
     subject = 'Photoserver rsync summary {}'.format(timestamp)
     body = html
-    writeFile(summaryFile, summary)
+    writeFile(summaryFile, header + summary)
 else:
     print ('No files transferred')
     subject = 'No photoserver file changes'

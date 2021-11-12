@@ -2,14 +2,10 @@
 from datetime import datetime, timedelta, date
 import sys, os, shutil
 import ssl, smtplib
-from numpy import rint
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-# import pytz
-# from time import sleep
-# from numpy import bool_, float32, mod, round, sort, unicode_, zeros
-# from funcs import boolFromStr,checkOutofState, getOLCFlightIDs, localFromUTC, publish, rank, readfile, readMembers,\
-#     requestWait, save, time_until_end_of_day, writeFile
+
+
 sys.path.append('/home/bret/secure')
 from photoserverEmail import *  #ignore the red lines...it reads these
 from funcs import diskUsage, readfile, writeFile
@@ -20,7 +16,10 @@ logsPath = 'logs/'
 if not os.path.exists(logsPath): os.mkdir(logsPath)
 backupDir = '/media/sf_backup/photoserverLychee/rsyncLychee'
 lines = readfile('lastBackupSize.txt')
-lastBackupSize = int(readfile('lastBackupSize.txt')[0])
+lastBackupSize = None
+backupIncr = None
+if len(lines) > 0:
+    lastBackupSize = int(readfile('lastBackupSize.txt')[0])
 totalBackupSize = int(diskUsage(backupDir)) # Mb
 timestamp = datetime.now().replace(microsecond=0).isoformat()
 latestLog = 'logs/rsync.log'
@@ -43,39 +42,49 @@ for line in lines:
             summary.append(line)
             summaryStr += line + '<br>\n'
             break
-
 writeFile(logFile,lines)
 print (summaryStr)
 
 for line in summary:
     if 'total size' in line:
-        rsyncTot = int(int(line.replace(',','').split('is')[1].split('speedup')[0])/1048576) #Mb
+        rsyncTot = int(int(line.replace(',','').split('is')[1].split('speedup')[0])/1e6)
+          #Mb
     elif ' sent ' in line:
-        rsyncSent = int(int(line.replace(',','').split('sent')[1].split('bytes')[0])/1048576) #Mb
-backupIncr = totalBackupSize - lastBackupSize #read from disk
+        rsyncRec = int(int(line.replace(',','').split('received')[1].split('bytes')[0])/1e6) #Mb
+if lastBackupSize:
+    backupIncr = totalBackupSize - lastBackupSize #read from disk
+    print('Stored increment', backupIncr)
+else:
+    print('lastBackupSize could not be read')
 print('rsyncTot', rsyncTot)
 print ('totalBackupSize',totalBackupSize)
-print ('rsyncSent', rsyncSent)
-print ('Disc increment'), backupIncr
+print ('rsyncRec', rsyncRec)
 
+
+writeFile('lastBackupSize.txt',[str(totalBackupSize)])
 alerts = []
-if backupIncr < 0:
-    alerts.append('Backup size has decreased!')
+
+html = '<!DOCTYPE html>\n'
+html += '<html>\n'
+html += '<head>\n'
+html += '<style> body {font-family:courier, courier new, serif;} </style>\n'
+html += '<body>\n'
+html += '<p>\n'
+html += summaryStr
+html += '</p>\n'
+html += '</body>\n'
+html += '</head>\n'
+html += '</html>\n'
+html
 
 #Make summary and email
-if newData:
+if backupIncr is not None and backupIncr < 0:
+    print ('Backup size has decreased!')
+    subject = 'Photoserver backup size has decreased!'
+    body = html
+    writeFile(summaryFile, summary)
+elif newData:
     subject = 'Photoserver rsync summary {}'.format(timestamp)
-    html = '<!DOCTYPE html>\n'
-    html += '<html>\n'
-    html += '<head>\n'
-    html += '<style> body {font-family:courier, courier new, serif;} </style>\n'
-    html += '<body>\n'
-    html += '<p>\n'
-    html += summaryStr
-    html += '</p>\n'
-    html += '</body>\n'
-    html += '</head>\n'
-    html += '</html>\n'
     body = html
     writeFile(summaryFile, summary)
 else:

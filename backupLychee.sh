@@ -1,5 +1,5 @@
 rsync -av --progress --log-file=/home/bret/photoserver/logs/rsync.log \
   root@hessminecraft.cyou:/home/photoserver/Lychee \
-   /media/sf_photoserverLychee/rsyncLychee 
+   /media/sf_backup/photoserverLychee/rsyncLychee
 python3 /home/bret/photoserver/summaryEmailLogs.py
-mv /home/bret/photoserver/logs/rsync.log /home/bret/photoserver/logs/copyrsync.log
+mv -f /home/bret/photoserver/logs/rsync.log /home/bret/photoserver/logs/copyrsync.log

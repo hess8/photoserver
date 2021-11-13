@@ -26,7 +26,7 @@ latestLog = 'logs/rsync.log'
 logFile = 'logs/rsync{}.log'.format(timestamp)
 summaryFile = 'logs/summary{}.log'.format(timestamp)
 lines = readfile(latestLog)
-if len(lines) == 0: sys.exit('Stop.  logs/rsync.logs is empty or does not exist')
+if len(lines) == 0: sys.exit('Stop.  logs/rsync.log is empty or does not exist')
 summary = ['']
 header = []
 newData = False
@@ -64,19 +64,19 @@ else:
 summaryStr = '\n'
 headerStr = ''
 for line in summary:
-    summaryStr += line + '\n'
+    summaryStr += line + '<br>\n'
 for line in header:
-    headerStr += line + '\n'
+    headerStr += line + '<br>\n'
 
 writeFile('lastBackupSize.txt',[str(totalBackupSize)])
-headerStr + summaryStr
+
 html = '<!DOCTYPE html>\n'
 html += '<html>\n'
 html += '<head>\n'
 html += '<style> body {font-family:courier, courier new, serif;} </style>\n'
 html += '<body>\n'
 html += '<p>\n'
-html += summaryStr
+html += headerStr + summaryStr
 html += '</p>\n'
 html += '</body>\n'
 html += '</head>\n'

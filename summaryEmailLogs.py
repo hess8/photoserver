@@ -31,7 +31,7 @@ summary = ['']
 header = []
 newData = False
 keepTags = [' >f', ' sent ', 'total size']
-excludeTags = ['/.git/objects']
+excludeTags = ['/.git/objects','Lychee/storage/framework/sessions/']
 for line in lines:
     if ' >f' in line and '/.git/objects' not in line:
         newData = True
@@ -92,7 +92,7 @@ if backupIncr is not None and backupIncr < 0:
     body = html
     writeFile(summaryFile, header + summary)
 elif newData:
-    subject = 'Photoserver rsync summary {}'.format(timestamp)
+    subject = 'Photoserver {:6.2f}Gb new {}'.format(backupIncr/1000.,timestamp)
     body = html
     writeFile(summaryFile, header + summary)
 else:
